@@ -1,8 +1,19 @@
 # Script para enviar archivo PDF al middleware usando PowerShell 5.1
 param(
-    [string]$FilePath = "C:\Users\facu_\Downloads\Etiqueta (11).pdf",
-    [string]$ServerUrl = "http://190.193.235.6:5000/print-pdf"  # Cambiar por tu IP local
+    # Ruta del archivo PDF a enviar
+    [string]$FilePath = "C:\Users\facu_\Downloads\Etiqueta (11).pdf"
 )
+
+# Detectar la IP pública automáticamente
+try {
+    Write-Host "Consultando la IP pública..."
+    $publicIp = (Invoke-RestMethod -Uri 'https://api.ipify.org').Trim()
+    Write-Host "IP pública detectada: $publicIp"
+} catch {
+    Write-Warning "No se pudo detectar la IP pública. Usando 'localhost' como alternativa."
+    $publicIp = "localhost"
+}
+$ServerUrl = "http://${publicIp}:5000/print-pdf"
 
 # Verificar que el archivo existe
 if (-not (Test-Path $FilePath)) {
