@@ -1,6 +1,25 @@
 # Middleware de Impresión - Windows
 
-Este middleware permite recibir archivos PDF a través de HTTP y enviarlos directamente a una impresora en Windows.
+Este middleware permite recibir archivos PDF y TXT a través de HTTP y enviarlos directamente a una impresora en Windows.
+
+## 📁 Estructura del Proyecto
+
+```
+middleware/
+├── middleware.py           # Punto de entrada principal
+├── app.py                 # Factory de aplicación Flask
+├── config.py              # Configuración centralizada
+├── requirements.txt       # Dependencias del proyecto
+├── routes/
+│   ├── __init__.py
+│   └── main.py           # Rutas/endpoints de la API
+├── services/
+│   ├── __init__.py
+│   └── print_service.py  # Lógica de impresión
+└── utils/
+    ├── __init__.py
+    └── validation.py     # Utilidades de validación
+```
 
 ## 📝 Nota sobre IPs en ejemplos
 
@@ -32,7 +51,7 @@ python -m venv .venv
 
 ### 3. Instalar dependencias de Python
 ```powershell
-pip install flask pywin32
+pip install -r requirements.txt
 ```
 
 ### 4. Instalar SumatraPDF (necesario para imprimir PDFs)
@@ -44,7 +63,7 @@ winget install SumatraPDF.SumatraPDF
 
 ### 1. Configurar la impresora
 
-Edita el archivo `middleware.py` y cambia el nombre de la impresora:
+Edita el archivo `config.py` y cambia el nombre de la impresora:
 
 ```python
 # Cambiar por el nombre exacto de tu impresora en Windows
@@ -330,26 +349,6 @@ app.run(host='127.0.0.1', port=5000, debug=True)
 # Todas las interfaces (para acceso desde internet)
 app.run(host='0.0.0.0', port=5000, debug=True)
 ```
-
-### Ejemplo de integración con Odoo
-
-Una vez configurado para internet, desde Odoo puedes enviar archivos así:
-
-```python
-import requests
-
-# En tu módulo de Odoo
-def print_pdf_to_remote_printer(pdf_content, filename):
-    url = "http://tu-ip-publica:5000/print-pdf"
-    # O con ngrok: "https://abc123.ngrok.io/print-pdf"
-    
-    files = {'file': (filename, pdf_content, 'application/pdf')}
-    headers = {'Authorization': 'Bearer tu-token-secreto'}  # Si usas auth
-    
-    response = requests.post(url, files=files, headers=headers)
-    return response.status_code == 200
-```
-
 ### Firewall de Windows
 
 Si necesitas acceso desde otras computadoras:
@@ -400,7 +399,6 @@ Los logs aparecen en la consola donde se ejecuta el servidor. Para más detalle,
 - Los archivos temporales se eliminan automáticamente después de 5 segundos
 - El middleware está optimizado para Windows únicamente
 - Se recomienda usar en redes locales por seguridad
-- Para uso en producción, considerar usar un servidor WSGI como Gunicorn (aunque requerirá adaptaciones para Windows)
 
 ## 🆘 Soporte
 
