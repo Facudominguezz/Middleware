@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ -*- coding: utf-8 -*-
 
 """
 Servicios de impresión.
@@ -11,7 +11,11 @@ import tempfile
 import threading
 import time
 import uuid
+
+#Libreria Externas
 import win32api
+import wmi
+import pythoncom
 
 from config import (
     NOMBRE_IMPRESORA, 
@@ -132,6 +136,56 @@ class PrintService:
             print("Último recurso: abriendo el archivo...")
             os.startfile(ruta_archivo)
     
+    ###------------ Agregado Gabriel Lujan ---------------###
+    @staticmethod
+    def obtener_impresoras_activas():
+        """
+        Escanea el sistema en busca de impresoras instaladas y activas usando WMI.
+        Returns:
+            list: Una lista de nombres de impresoras que están listas para usar.
+        """
+        print("Escaneando impresoras activas en el sistema...")
+        try:
+            # 1. INICIALIZAR COM: Registra el hilo actual para que pueda usar WMI.
+            pythoncom.CoInitialize()
+
+            c = wmi.WMI()
+            impresoras_detalladas = []
+        
+            for printer in c.Win32_Printer():
+                # Volvemos a poner el filtro original para obtener solo las activas
+                if printer.PrinterStatus == 3 or printer.PrinterStatus == 4:
+                    
+                    # --- INICIO DE LA NUEVA LÓGICA DE DETECCIÓN ---
+                    port_name = printer.PortName
+                    printer_type = "Desconocido"
+                    port = port_name
+                
+
+                # Creamos un diccionario (objeto) con todos los detalles
+                printer_info = {
+                    "name": printer.Name,
+                    "port": port
+                }
+
+                # --- FIN DE LA NUEVA LÓGICA --- # 
+
+                print(f"Impresora activa encontrada: {printer_info}")
+                impresoras_detalladas.append(printer_info)
+
+            if not impresoras_detalladas:
+                print("ADVERTENCIA: No se encontraron impresoras en estado 'Activo' (Idle o Printing).")
+
+            return impresoras_detalladas
+            
+        # ESTA ES LA PARTE CORREGIDA: Ahora está correctamente indentado
+        except Exception as e:
+            print(f"ERROR al escanear impresoras con WMI: {e}")
+            return []
+        finally:
+            # 2. DESINICIALIZAR COM: Libera el hilo, sin importar si hubo éxito o error.
+            pythoncom.CoUninitialize()
+
     @staticmethod
     def programar_limpieza(ruta_archivo):
         """
