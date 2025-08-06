@@ -1,4 +1,4 @@
- -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 Servicios de impresión.
@@ -163,12 +163,12 @@ class PrintService:
                 
 
                 # Creamos un diccionario (objeto) con todos los detalles
-                printer_info = {
+                    printer_info = {
                     "name": printer.Name,
                     "port": port
                 }
 
-                # --- FIN DE LA NUEVA LÓGICA --- # 
+                # --- FIN DE LA NUEVA LÓGICA ---
 
                 print(f"Impresora activa encontrada: {printer_info}")
                 impresoras_detalladas.append(printer_info)
@@ -184,6 +184,48 @@ class PrintService:
             return []
         finally:
             # 2. DESINICIALIZAR COM: Libera el hilo, sin importar si hubo éxito o error.
+            pythoncom.CoUninitialize()
+
+     # --- MÉTODO NUEVO PARA ESTABLECER LA IMPRESORA PREDETERMINADA ---
+    @staticmethod
+    def establecer_impresora_predeterminada(nombre_impresora):
+        """
+        Establece una impresora específica como la predeterminada del sistema en Windows.
+
+        Args:
+            nombre_impresora (str): El nombre exacto de la impresora a configurar.
+
+        Returns:
+            bool: True si la operación fue exitosa, False si no se encontró la impresora.
+        
+        Raises:
+            Exception: Si ocurre un error durante la operación con WMI.
+        """
+        print(f"Intentando establecer '{nombre_impresora}' como predeterminada...")
+        try:
+            # Es necesario inicializar COM para este hilo, igual que antes.
+            pythoncom.CoInitialize()
+
+            c = wmi.WMI()
+            # Buscamos la impresora por su nombre exacto.
+            impresora = c.Win32_Printer(Name=nombre_impresora)
+
+            # La consulta devuelve una lista, verificamos si encontró algo.
+            if not impresora:
+                print(f"ERROR: No se encontró ninguna impresora con el nombre '{nombre_impresora}'.")
+                return False
+
+            # El método SetDefaultPrinter() hace todo el trabajo.
+            impresora[0].SetDefaultPrinter()
+            print(f"Impresora '{nombre_impresora}' establecida como predeterminada en Windows.")
+            return True
+
+        except Exception as e:
+            print(f"ERROR al intentar establecer la impresora predeterminada: {e}")
+            # relanzamos la excepción para que el endpoint la maneje
+            raise e
+        finally:
+            # Siempre liberamos el hilo al final.
             pythoncom.CoUninitialize()
 
     @staticmethod

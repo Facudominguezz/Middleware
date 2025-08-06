@@ -4,8 +4,8 @@
 Rutas de la aplicación Flask (blueprints).
 Contiene todos los endpoints de la API.
 """
-
-from flask import Blueprint, request, Response
+                                               #--------
+from flask import Blueprint, request, Response, jsonify #<---- agregado por gabriel
 
 from services import PrintService
 from utils import ValidationUtils
@@ -22,6 +22,59 @@ def estado_salud():
     Responde con un mensaje simple y un código de estado 200 OK.
     """
     return Response("Middleware de impresión activo", status=200)
+
+## --------  METODO DE GET NUEVO GABRIEL LUJAN--------##
+
+@main_bp.route('/printers', methods=['GET'])
+def listar_impresoras():
+    """
+    Endpoint que devuelve una lista de las impresoras activas
+    detectadas en el sistema.
+    """
+    try:
+        # Reutilizamos la validación para asegurarnos de que estamos en Windows
+        ValidationUtils.validar_sistema_operativo()
+
+        # Llamamos al nuevo método del servicio de impresión
+        impresoras = PrintService.obtener_impresoras_activas()
+
+        # Devolvemos la lista en formato JSON
+        return jsonify(impresoras), 200
+
+    except Exception as e:
+        print(f"ERROR en /printers: {str(e)}")
+        return Response(f"Error: {str(e)}", status=500)
+
+
+@main_bp.route('/impresora/predeterminada', methods=['POST'])
+def establecer_predeterminada():
+    """
+    Endpoint para establecer una impresora como predeterminada en Windows.
+    Recibe un JSON con el nombre de la impresora.
+    """
+    # 1. Validar que la petición contiene un JSON válido.
+    data = request.get_json()
+    if not data:
+        return Response("Error: La petición debe contener un cuerpo JSON.", status=400)
+
+    # 2. Validar que el campo 'nombre' existe en el JSON.
+    nombre_impresora = data.get('nombre')
+    if not nombre_impresora:
+        return Response("Error: El JSON debe contener la clave 'nombre' con el nombre de la impresora.", status=400)
+
+    try:
+        # 3. Llamar al servicio para hacer el trabajo.
+        exito = PrintService.establecer_impresora_predeterminada(nombre_impresora)
+
+        # 4. Devolver una respuesta basada en el resultado.
+        if exito:
+            return jsonify({"mensaje": f"Impresora '{nombre_impresora}' establecida como predeterminada."}), 200
+        else:
+            return jsonify({"error": f"No se encontró la impresora con el nombre '{nombre_impresora}'."}), 404
+
+    except Exception as e:
+        print(f"ERROR en /impresora/predeterminada: {str(e)}")
+        return Response(f"Error interno del servidor: {str(e)}", status=500)   
 
 
 @main_bp.route('/print-pdf', methods=['POST'])
