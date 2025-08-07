@@ -4,8 +4,8 @@
 Rutas de la aplicación Flask (blueprints).
 Contiene todos los endpoints de la API.
 """
-
-from flask import Blueprint, request, Response
+                                               #--------
+from flask import Blueprint, request, Response, jsonify #<---- agregado por gabriel
 
 from services import PrintService
 from utils import ValidationUtils
@@ -23,6 +23,29 @@ def estado_salud():
     """
     return Response("Middleware de impresión activo", status=200)
 
+## --------  METODO DE GET NUEVO GABRIEL LUJAN--------##
+
+@main_bp.route('/printers', methods=['GET'])
+def listar_impresoras():
+    """
+    Endpoint que devuelve una lista de las impresoras activas
+    detectadas en el sistema.
+    """
+    try:
+        # Reutilizamos la validación para asegurarnos de que estamos en Windows
+        ValidationUtils.validar_sistema_operativo()
+
+        # Llamamos al nuevo método del servicio de impresión
+        impresoras = PrintService.obtener_impresoras_activas()
+
+        # Devolvemos la lista en formato JSON
+        return jsonify(impresoras), 200
+
+    except Exception as e:
+        print(f"ERROR en /printers: {str(e)}")
+        return Response(f"Error: {str(e)}", status=500)
+
+### ----- ---- ---- -----------------------------------------    
 
 @main_bp.route('/print-pdf', methods=['POST'])
 def imprimir_pdf():
@@ -62,3 +85,4 @@ def imprimir_pdf():
             status_code = 500  # Internal Server Error
             
         return Response(f"Error: {str(e)}", status=status_code)
+
