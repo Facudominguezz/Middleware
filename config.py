@@ -10,7 +10,8 @@ import socket
 # --- CONFIGURACIÓN PRINCIPAL ---
 # IMPORTANTE: Aquí debes poner el nombre exacto de tu impresora como aparece en Windows.
 # Puedes encontrarlo en "Dispositivos e impresoras" o ejecutando en PowerShell: Get-Printer
-NOMBRE_IMPRESORA = "PT-950NW"
+
+NOMBRE_IMPRESORA = "Brother <MODELO DE IMPRESORA>"
 
 # Configuración del servidor
 HOST = "0.0.0.0"  # Se configurará dinámicamente
