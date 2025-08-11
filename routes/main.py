@@ -45,7 +45,37 @@ def listar_impresoras():
         print(f"ERROR en /printers: {str(e)}")
         return Response(f"Error: {str(e)}", status=500)
 
-### ----- ---- ---- -----------------------------------------    
+
+@main_bp.route('/impresora/predeterminada', methods=['POST'])
+def establecer_predeterminada():
+    """
+    Endpoint para establecer una impresora como predeterminada en Windows.
+    Recibe un JSON con el nombre de la impresora.
+    """
+    # 1. Validar que la petición contiene un JSON válido.
+    data = request.get_json()
+    if not data:
+        return Response("Error: La petición debe contener un cuerpo JSON.", status=400)
+
+    # 2. Validar que el campo 'nombre' existe en el JSON.
+    nombre_impresora = data.get('nombre')
+    if not nombre_impresora:
+        return Response("Error: El JSON debe contener la clave 'nombre' con el nombre de la impresora.", status=400)
+
+    try:
+        # 3. Llamar al servicio para hacer el trabajo.
+        exito = PrintService.establecer_impresora_predeterminada(nombre_impresora)
+
+        # 4. Devolver una respuesta basada en el resultado.
+        if exito:
+            return jsonify({"mensaje": f"Impresora '{nombre_impresora}' establecida como predeterminada."}), 200
+        else:
+            return jsonify({"error": f"No se encontró la impresora con el nombre '{nombre_impresora}'."}), 404
+
+    except Exception as e:
+        print(f"ERROR en /impresora/predeterminada: {str(e)}")
+        return Response(f"Error interno del servidor: {str(e)}", status=500)   
+
 
 @main_bp.route('/print-pdf', methods=['POST'])
 def imprimir_pdf():
@@ -85,4 +115,3 @@ def imprimir_pdf():
             status_code = 500  # Internal Server Error
             
         return Response(f"Error: {str(e)}", status=status_code)
-
