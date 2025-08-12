@@ -18,11 +18,11 @@ import wmi
 import pythoncom
 
 from config import (
-    NOMBRE_IMPRESORA, 
+    obtener_impresora_actual, 
     RUTAS_SUMATRA, 
     TIMEOUT_POWERSHELL, 
     TIMEOUT_SUMATRA, 
-    TIMEOUT_LIMPIEZA
+    TIMEOUT_LIMPIEZA,
 )
 
 
@@ -65,8 +65,9 @@ class PrintService:
         Raises:
             Exception: Si hay error en la impresión
         """
-        print("Intentando imprimir archivo TXT directamente...")
-        comando_ps = f'Get-Content "{ruta_archivo}" | Out-Printer -Name "{NOMBRE_IMPRESORA}"'
+        nombre_impresora = obtener_impresora_actual() # <-- OBTENER IMPRESORA ACTUAL
+        print(f"Intentando imprimir archivo TXT en '{nombre_impresora}'...")
+        comando_ps = f'Get-Content "{ruta_archivo}" | Out-Printer -Name "{nombre_impresora}"'
         
         resultado = subprocess.run(
             ["powershell", "-Command", comando_ps],
@@ -93,8 +94,9 @@ class PrintService:
         Raises:
             Exception: Si hay error en la impresión o no se encuentra SumatraPDF
         """
-        print("Intentando imprimir PDF con SumatraPDF...")
-        
+        nombre_impresora = obtener_impresora_actual() # <-- OBTENER IMPRESORA ACTUAL
+        print(f"Intentando imprimir PDF con SumatraPDF en '{nombre_impresora}'...")
+    
         sumatra_encontrado = False
         for ruta_sumatra in RUTAS_SUMATRA:
             ruta_expandida = os.path.expanduser(ruta_sumatra)
@@ -103,7 +105,7 @@ class PrintService:
                 
                 resultado = subprocess.run([
                     ruta_expandida,
-                    "-print-to", NOMBRE_IMPRESORA,
+                    "-print-to", nombre_impresora, # <-- Usar la variable
                     "-silent",
                     ruta_archivo
                 ], capture_output=True, text=True, timeout=TIMEOUT_SUMATRA, check=False)
@@ -118,6 +120,9 @@ class PrintService:
         
         if not sumatra_encontrado:
             raise Exception("SumatraPDF no encontrado en las rutas habituales. Por favor, instálalo.")
+        
+        if not sumatra_encontrado:
+            raise Exception("SumatraPDF no encontrado en las rutas habituales. Por favor, instálalo.")
     
     @staticmethod
     def imprimir_con_respaldo(ruta_archivo):
@@ -127,9 +132,10 @@ class PrintService:
         Args:
             ruta_archivo (str): Ruta del archivo a imprimir
         """
+        nombre_impresora = obtener_impresora_actual() # <-- OBTENER IMPRESORA ACTUAL
         try:
-            print("Intentando método de respaldo con win32api...")
-            win32api.ShellExecute(0, "print", ruta_archivo, f'/d:"{NOMBRE_IMPRESORA}"', ".", 0)
+            print(f"Intentando método de respaldo con win32api en '{nombre_impresora}'...")
+            win32api.ShellExecute(0, "print", ruta_archivo, f'/d:"{nombre_impresora}"', ".", 0)
             print("Archivo enviado a impresión usando el método de respaldo win32api.")
         except Exception as e2:
             print(f"ERROR con win32api: {str(e2)}")
@@ -140,101 +146,70 @@ class PrintService:
     @staticmethod
     def obtener_impresoras_activas():
         """
-        Escanea el sistema en busca de impresoras instaladas y activas usando WMI.
-        Returns:
-            list: Una lista de nombres de impresoras que están listas para usar.
+        Escanea el sistema en busca de impresoras que están listas para imprimir.
         """
-        print("Escaneando impresoras activas en el sistema...")
+        print("Escaneando impresoras listas en el sistema...")
         try:
-            # 1. INICIALIZAR COM: Registra el hilo actual para que pueda usar WMI.
             pythoncom.CoInitialize()
-
             c = wmi.WMI()
             impresoras_detalladas = []
-        
+
             for printer in c.Win32_Printer():
-                # Volvemos a poner el filtro original para obtener solo las activas
-                if printer.PrinterStatus == 3 or printer.PrinterStatus == 4:
-                    
-                    # --- INICIO DE LA NUEVA LÓGICA DE DETECCIÓN ---
+                esta_en_linea = printer.WorkOffline is False
+                estado_listo = printer.PrinterStatus == 3 or printer.PrinterStatus == 4
+
+                if esta_en_linea and estado_listo:
                     port_name = printer.PortName
-                    printer_type = "Desconocido"
                     port = port_name
-                
-
-                # Creamos un diccionario (objeto) con todos los detalles
+            
                     printer_info = {
-                    "name": printer.Name,
-                    "port": port
-                }
-
-                # --- FIN DE LA NUEVA LÓGICA ---
-
-                print(f"Impresora activa encontrada: {printer_info}")
-                impresoras_detalladas.append(printer_info)
+                        "name": printer.Name,
+                        "port": port
+                    }
+                    print(f"Impresora lista encontrada: {printer_info}")
+                    impresoras_detalladas.append(printer_info)
 
             if not impresoras_detalladas:
-                print("ADVERTENCIA: No se encontraron impresoras en estado 'Activo' (Idle o Printing).")
+                print("ADVERTENCIA: No se encontraron impresoras en estado 'En Línea' y 'Lista/Inactiva'.")
 
             return impresoras_detalladas
-            
-        # ESTA ES LA PARTE CORREGIDA: Ahora está correctamente indentado
+        
         except Exception as e:
             print(f"ERROR al escanear impresoras con WMI: {e}")
             return []
         finally:
-            # 2. DESINICIALIZAR COM: Libera el hilo, sin importar si hubo éxito o error.
             pythoncom.CoUninitialize()
 
      # --- MÉTODO NUEVO PARA ESTABLECER LA IMPRESORA PREDETERMINADA ---
     @staticmethod
     def establecer_impresora_predeterminada(nombre_impresora):
         """
-        Establece una impresora específica como la predeterminada del sistema en Windows.
-
-        Args:
-            nombre_impresora (str): El nombre exacto de la impresora a configurar.
-
-        Returns:
-            bool: True si la operación fue exitosa, False si no se encontró la impresora.
-        
-        Raises:
-            Exception: Si ocurre un error durante la operación con WMI.
+        Establece una impresora como la predeterminada del sistema en Windows.
         """
-        print(f"Intentando establecer '{nombre_impresora}' como predeterminada...")
+        print(f"Intentando establecer '{nombre_impresora}' como predeterminada en Windows...")
         try:
-            # Es necesario inicializar COM para este hilo, igual que antes.
             pythoncom.CoInitialize()
-
             c = wmi.WMI()
-            # Buscamos la impresora por su nombre exacto.
             impresora = c.Win32_Printer(Name=nombre_impresora)
 
-            # La consulta devuelve una lista, verificamos si encontró algo.
             if not impresora:
                 print(f"ERROR: No se encontró ninguna impresora con el nombre '{nombre_impresora}'.")
                 return False
 
-            # El método SetDefaultPrinter() hace todo el trabajo.
             impresora[0].SetDefaultPrinter()
             print(f"Impresora '{nombre_impresora}' establecida como predeterminada en Windows.")
             return True
 
         except Exception as e:
             print(f"ERROR al intentar establecer la impresora predeterminada: {e}")
-            # relanzamos la excepción para que el endpoint la maneje
             raise e
         finally:
-            # Siempre liberamos el hilo al final.
             pythoncom.CoUninitialize()
 
     @staticmethod
     def programar_limpieza(ruta_archivo):
         """
         Programa la eliminación del archivo temporal en segundo plano.
-        
-        Args:
-            ruta_archivo (str): Ruta del archivo temporal a eliminar
         """
         def limpiar_archivo():
             time.sleep(TIMEOUT_LIMPIEZA)
@@ -250,21 +225,10 @@ class PrintService:
     def procesar_impresion(cls, archivo):
         """
         Método principal que orquesta todo el proceso de impresión.
-        
-        Args:
-            archivo: Archivo recibido de la petición Flask
-            
-        Returns:
-            bool: True si la impresión fue exitosa
-            
-        Raises:
-            Exception: Si hay errores en el proceso
         """
-        # Guardar archivo temporal
         ruta_archivo = cls.guardar_archivo_temporal(archivo)
         
         try:
-            # Determinar el método de impresión según la extensión
             _, extension = os.path.splitext(archivo.filename)
             extension = extension.lower()
             
@@ -278,7 +242,6 @@ class PrintService:
             cls.imprimir_con_respaldo(ruta_archivo)
         
         finally:
-            # Programar limpieza del archivo temporal
             cls.programar_limpieza(ruta_archivo)
         
         return True
