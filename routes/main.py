@@ -9,7 +9,7 @@ from flask import Blueprint, request, Response, jsonify #<---- agregado por gabr
 
 from services import PrintService
 from utils import ValidationUtils
-from config import establecer_impresora_actual
+from impresoraConf import establecer_impresora_actual
 
 # Crear blueprint para las rutas principales
 main_bp = Blueprint('main', __name__)
