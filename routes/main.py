@@ -9,6 +9,7 @@ from flask import Blueprint, request, Response, jsonify #<---- agregado por gabr
 
 from services import PrintService
 from utils import ValidationUtils
+from config import establecer_impresora_actual
 
 # Crear blueprint para las rutas principales
 main_bp = Blueprint('main', __name__)
@@ -49,25 +50,24 @@ def listar_impresoras():
 @main_bp.route('/impresora/predeterminada', methods=['POST'])
 def establecer_predeterminada():
     """
-    Endpoint para establecer una impresora como predeterminada en Windows.
-    Recibe un JSON con el nombre de la impresora.
+    Endpoint para establecer una impresora como predeterminada.
     """
-    # 1. Validar que la petición contiene un JSON válido.
     data = request.get_json()
     if not data:
         return Response("Error: La petición debe contener un cuerpo JSON.", status=400)
 
-    # 2. Validar que el campo 'nombre' existe en el JSON.
     nombre_impresora = data.get('nombre')
     if not nombre_impresora:
         return Response("Error: El JSON debe contener la clave 'nombre' con el nombre de la impresora.", status=400)
 
     try:
-        # 3. Llamar al servicio para hacer el trabajo.
         exito = PrintService.establecer_impresora_predeterminada(nombre_impresora)
 
-        # 4. Devolver una respuesta basada en el resultado.
         if exito:
+            # --- LÍNEA AÑADIDA ---
+            # Guardamos la impresora en nuestra configuración persistente.
+            establecer_impresora_actual(nombre_impresora)
+            # --------------------
             return jsonify({"mensaje": f"Impresora '{nombre_impresora}' establecida como predeterminada."}), 200
         else:
             return jsonify({"error": f"No se encontró la impresora con el nombre '{nombre_impresora}'."}), 404
@@ -94,24 +94,27 @@ def imprimir_pdf():
         archivo = ValidationUtils.validar_peticion(request)
         ValidationUtils.validar_archivo(archivo)
         
-        # 4. Procesar impresión
-        PrintService.procesar_impresion(archivo)
+         # 4. Procesar impresión
+        impresion_exitosa = PrintService.procesar_impresion(archivo)
         
-        # 5. Respuesta exitosa
-        return Response("Archivo enviado a impresión", status=200)
-        
+        # 5. Respuesta basada en el resultado
+        if impresion_exitosa:
+            return Response("Archivo enviado a impresión", status=200)
+        else:
+            return Response("Error: No se pudo completar la impresión. Revise los logs del servidor para más detalles.", status=500)
+
     except Exception as e:
         # Manejo de errores
         print(f"ERROR: {str(e)}")
         
         # Determinar código de estado basado en el tipo de error
         if "no soportado" in str(e).lower():
-            status_code = 415  # Unsupported Media Type
+            status_code = 415 # Unsupported Media Type
         elif "no se recibió" in str(e).lower() or "vacío" in str(e).lower():
-            status_code = 400  # Bad Request
+            status_code = 400 # Bad Request
         elif "solo es compatible" in str(e).lower():
-            status_code = 400  # Bad Request
+            status_code = 400 # Bad Request
         else:
-            status_code = 500  # Internal Server Error
+            status_code = 500 # Internal Server Error
             
         return Response(f"Error: {str(e)}", status=status_code)
