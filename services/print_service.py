@@ -16,9 +16,8 @@ import uuid
 import win32api
 import wmi
 import pythoncom
-
-from config import (
-    obtener_impresora_actual, 
+from impresoraConf import obtener_impresora_actual
+from config import ( 
     RUTAS_SUMATRA, 
     TIMEOUT_POWERSHELL, 
     TIMEOUT_SUMATRA, 
