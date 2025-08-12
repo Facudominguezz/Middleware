@@ -6,7 +6,10 @@ Punto de entrada principal de la aplicación.
 """
 
 from app import crear_app
-from config import obtener_ip_local, NOMBRE_IMPRESORA, PORT
+from config import obtener_ip_local, PORT
+from impresoraConf import obtener_impresora_actual
+
+impresora_actual = obtener_impresora_actual()
 
 # --- PUNTO DE ENTRADA DE LA APLICACIÓN ---
 # Este bloque solo se ejecuta cuando el script se corre directamente (ej. 'python middleware.py').
@@ -21,12 +24,11 @@ if __name__ == '__main__':
     print("--- INICIANDO MIDDLEWARE DE IMPRESIÓN ---")
     print(f"🌐 Servidor iniciando en: http://{ip_local}:{PORT}")
     print(f"📍 IP local detectada: {ip_local}")
-    print(f"🖨️  Impresora configurada: '{NOMBRE_IMPRESORA}'")
+    print(f"🖨️  Impresora configurada: '{impresora_actual}'")
     print("📡 Para detener el servidor, presiona CTRL+C")
     
     # Se inicia el servidor Flask.
     # host=ip_local -> Hace que el servidor sea visible en tu red local.
     # port=PORT -> El puerto en el que escuchará el servidor.
     # debug=True -> Activa el modo de depuración, que reinicia el servidor al detectar cambios en el código.
-    aplicacion.run(host=ip_local, port=PORT, debug=True)
-
+    aplicacion.run(host='0.0.0.0', port=PORT, debug=True)
